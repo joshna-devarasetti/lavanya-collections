@@ -3,6 +3,8 @@ const Order = require('../models/Order');
 const CustomDesignRequest = require('../models/CustomDesignRequest');
 const RentalBooking = require('../models/RentalBooking');
 const Product = require('../models/Product');
+const BusinessSettings = require('../models/BusinessSettings');
+const QRCode = require('qrcode');
 const {
   createRazorpayOrder,
   verifyPaymentSignature,
@@ -10,7 +12,7 @@ const {
 } = require('../services/razorpayService');
 const { notify } = require('../services/notificationService');
 
-// Create Razorpay Order for Order or Custom Design Request
+// Create Razorpay Order & PhonePe UPI Details for Order or Custom Design Request
 const initiatePayment = async (req, res, next) => {
   try {
     const { orderId, customRequestId } = req.body;
@@ -73,12 +75,20 @@ const initiatePayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Payable amount must be greater than zero.' });
     }
 
+    // Fetch PhonePe & Razorpay business settings
+    const settings = await BusinessSettings.findOne();
+    const phonePeNumber = settings?.paymentSettings?.phonePeNumber || process.env.PHONEPE_NUMBER || '6372556290';
+    const upiId = settings?.paymentSettings?.upiId || process.env.PHONEPE_UPI_ID || `${phonePeNumber}@ybl`;
+    const upiAccountName = settings?.paymentSettings?.upiAccountName || 'Lavanya Collections';
+
     // Call Razorpay API to generate order
     const receipt = entityType === 'order' ? targetEntity.orderNumber : targetEntity.requestNumber;
     const rzpOrder = await createRazorpayOrder(payableAmountINR, receipt, {
       entityType,
       entityId: targetEntity._id.toString(),
-      paymentType
+      paymentType,
+      phonepe_number: phonePeNumber,
+      phonepe_upi_id: upiId
     });
 
     // Save Payment record in DB
@@ -100,6 +110,28 @@ const initiatePayment = async (req, res, next) => {
       await targetEntity.save();
     }
 
+    // Build standard Indian UPI Intent and PhonePe Deep-link URLs
+    const encodedName = encodeURIComponent(upiAccountName);
+    const orderRef = entityType === 'order' ? targetEntity.orderNumber : targetEntity.requestNumber;
+    const upiIntentUrl = `upi://pay?pa=${upiId}&pn=${encodedName}&am=${payableAmountINR}&cu=INR&tn=Order_${orderRef}`;
+    const phonepeIntentUrl = `phonepe://pay?pa=${upiId}&pn=${encodedName}&am=${payableAmountINR}&cu=INR&tn=Order_${orderRef}`;
+
+    // Generate Dynamic Base64 UPI QR Code for instant scanning with PhonePe
+    let qrCodeDataUrl = '';
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL(upiIntentUrl, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 280,
+        color: {
+          dark: '#3A1E05',
+          light: '#FFFFFF'
+        }
+      });
+    } catch (qrErr) {
+      console.warn('QR code generation error:', qrErr.message);
+    }
+
     res.json({
       success: true,
       message: 'Payment order created.',
@@ -108,9 +140,17 @@ const initiatePayment = async (req, res, next) => {
       amount: rzpOrder.amount, // in paise
       amountInINR: payableAmountINR,
       currency: 'INR',
-      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
+      keyId: rzpOrder.keyId || process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
       customerDetails: targetEntity.customerDetails,
-      isMock: !!rzpOrder.isMock
+      isMock: !!rzpOrder.isMock,
+      phonePe: {
+        number: phonePeNumber,
+        upiId: upiId,
+        accountName: upiAccountName,
+        upiIntentUrl,
+        phonepeIntentUrl,
+        qrCodeDataUrl
+      }
     });
   } catch (err) {
     next(err);
@@ -149,7 +189,7 @@ const verifyPayment = async (req, res, next) => {
     }
 
     // Verify official HMAC SHA256 signature
-    const isValid = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+    const isValid = await verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
     if (!isValid) {
       payment.status = 'failed';
       payment.failureReason = 'Invalid cryptographic payment signature.';
@@ -332,9 +372,150 @@ const getAdminPayments = async (req, res, next) => {
   }
 };
 
+// Verify Direct PhonePe / UPI Payment using UTR / Transaction ID
+const verifyDirectUPI = async (req, res, next) => {
+  try {
+    const { orderId, customRequestId, utr, phonePeNumber = '6372556290' } = req.body;
+
+    if (!orderId && !customRequestId) {
+      return res.status(400).json({ success: false, message: 'orderId or customRequestId is required.' });
+    }
+
+    let targetEntity = null;
+    let entityType = '';
+    let payableAmount = 0;
+
+    if (orderId) {
+      targetEntity = await Order.findById(orderId);
+      if (!targetEntity) return res.status(404).json({ success: false, message: 'Order not found.' });
+      entityType = 'order';
+
+      if (targetEntity.paymentStatus === 'fully_paid') {
+        return res.status(400).json({ success: false, message: 'This order is already fully paid.' });
+      }
+
+      if (targetEntity.paymentTypeChosen === 'full') {
+        payableAmount = targetEntity.totalAmount;
+      } else {
+        const itemsAdvance = targetEntity.items.reduce((sum, item) => sum + (item.advanceAmount || 0), 0);
+        payableAmount = itemsAdvance + (targetEntity.shippingFee || 0);
+      }
+    } else {
+      targetEntity = await CustomDesignRequest.findById(customRequestId);
+      if (!targetEntity) return res.status(404).json({ success: false, message: 'Custom request not found.' });
+      entityType = 'custom_request';
+      payableAmount = targetEntity.quotation?.advanceAmount || 0;
+    }
+
+    const transactionRef = utr && utr.trim() ? utr.trim() : `PHONEPE_UTR_${Date.now()}`;
+
+    // Create or find payment record
+    let payment = await Payment.findOne({
+      [entityType === 'order' ? 'order' : 'customRequest']: targetEntity._id,
+      status: 'created'
+    });
+
+    if (!payment) {
+      payment = new Payment({
+        order: entityType === 'order' ? targetEntity._id : undefined,
+        customRequest: entityType === 'custom_request' ? targetEntity._id : undefined,
+        customer: req.user ? req.user._id : targetEntity.customer,
+        paymentType: targetEntity.paymentTypeChosen || 'advance',
+        amount: payableAmount,
+        amountInPaise: Math.round(payableAmount * 100),
+        currency: 'INR',
+        gateway: 'manual_upi',
+        razorpayOrderId: `phonepe_upi_${Date.now()}`,
+        status: 'created'
+      });
+    }
+
+    payment.status = 'verified';
+    payment.gateway = 'manual_upi';
+    payment.paymentMethod = `PhonePe UPI (${phonePeNumber})`;
+    payment.razorpayPaymentId = transactionRef;
+    payment.verifiedAt = new Date();
+    await payment.save();
+
+    // Process Order fulfillment
+    if (entityType === 'order') {
+      targetEntity.amountPaid += payableAmount;
+      targetEntity.balanceAmount = Math.max(0, targetEntity.totalAmount - targetEntity.amountPaid);
+      targetEntity.paymentStatus = targetEntity.balanceAmount <= 0 ? 'fully_paid' : 'partially_paid';
+      targetEntity.orderStatus = 'confirmed';
+      await targetEntity.save();
+
+      // Update rentals & decrement stock
+      for (const item of targetEntity.items) {
+        if (item.itemType === 'rental' && item.rentalBooking) {
+          await RentalBooking.findByIdAndUpdate(item.rentalBooking, {
+            status: 'confirmed',
+            advancePaid: item.advanceAmount,
+            balanceDue: item.remainingAmount
+          });
+        }
+        if (item.itemType === 'purchase' && item.product) {
+          await Product.findByIdAndUpdate(item.product, {
+            $inc: { stockQuantity: -item.quantity }
+          });
+        }
+      }
+
+      // Notify Admin & Customer
+      await notify({
+        recipientRole: 'admin',
+        type: 'payment_verified',
+        title: 'PhonePe Payment Received',
+        message: `PhonePe payment of ₹${payableAmount} verified for Order #${targetEntity.orderNumber} (Ref: ${transactionRef}, PhonePe: ${phonePeNumber}).`,
+        link: '/admin/orders',
+        data: { orderId: targetEntity._id, paymentId: payment._id }
+      });
+
+      if (targetEntity.customerDetails?.phone) {
+        await notify({
+          recipientRole: 'customer',
+          recipientUser: targetEntity.customer,
+          recipientPhone: targetEntity.customerDetails.phone,
+          type: 'payment_verified',
+          title: 'PhonePe Payment Received!',
+          message: `Thank you! Your PhonePe payment of ₹${payableAmount} for Order #${targetEntity.orderNumber} is confirmed (UTR: ${transactionRef}).`,
+          link: '/account/orders',
+          data: { orderId: targetEntity._id }
+        });
+      }
+    } else {
+      targetEntity.status = 'in_production';
+      if (targetEntity.quotation) {
+        targetEntity.quotation.customerResponse = 'accepted';
+        targetEntity.quotation.customerResponseAt = new Date();
+      }
+      await targetEntity.save();
+
+      await notify({
+        recipientRole: 'admin',
+        type: 'quotation_approved',
+        title: 'Custom Quotation Paid via PhonePe',
+        message: `Customer ${targetEntity.customerDetails?.name} paid advance ₹${payableAmount} via PhonePe (Ref: ${transactionRef}) for Custom Design #${targetEntity.requestNumber}.`,
+        link: '/admin/custom-requests',
+        data: { customRequestId: targetEntity._id }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'PhonePe payment confirmed and order placed successfully!',
+      order: targetEntity,
+      payment
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   initiatePayment,
   verifyPayment,
+  verifyDirectUPI,
   handleWebhook,
   getAdminPayments
 };

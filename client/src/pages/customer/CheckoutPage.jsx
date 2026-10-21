@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Sparkles, CreditCard, CheckCircle2, ArrowRight, Truck, Store } from 'lucide-react';
+import { ShieldCheck, Sparkles, CreditCard, CheckCircle2, ArrowRight, Truck, Store, Smartphone, QrCode, ExternalLink, Copy, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -29,10 +29,14 @@ export const CheckoutPage = () => {
 
   const [deliveryMethod, setDeliveryMethod] = useState('courier'); // 'courier' or 'store_pickup'
   const [paymentChoice, setPaymentChoice] = useState('advance'); // 'advance' or 'full'
+  const [selectedGateway, setSelectedGateway] = useState('phonepe'); // 'phonepe' or 'razorpay'
   const [policyAccepted, setPolicyAccepted] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [mockPaymentModal, setMockPaymentModal] = useState(null);
+  const [phonePeModal, setPhonePeModal] = useState(null);
+  const [utrInput, setUtrInput] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -112,11 +116,21 @@ export const CheckoutPage = () => {
 
       const createdOrder = orderRes.order;
 
-      // 2. Initiate Razorpay payment order
+      // 2. Initiate payment order
       const paymentOrderRes = await api.initiatePayment({ orderId: createdOrder._id });
       if (!paymentOrderRes.success) throw new Error(paymentOrderRes.message);
 
-      // Check if running in mock/demo mode
+      if (selectedGateway === 'phonepe') {
+        // Open PhonePe Instant UPI Modal
+        setPhonePeModal({
+          order: createdOrder,
+          paymentOrder: paymentOrderRes
+        });
+        setProcessing(false);
+        return;
+      }
+
+      // 3. Razorpay flow: check if running in mock/demo mode
       if (paymentOrderRes.isMock || !window.Razorpay) {
         // Open interactive Test Mode Simulator
         setMockPaymentModal({
@@ -127,7 +141,7 @@ export const CheckoutPage = () => {
         return;
       }
 
-      // 3. Launch official Razorpay Checkout SDK
+      // Launch official Razorpay Checkout SDK
       const options = {
         key: paymentOrderRes.keyId,
         amount: paymentOrderRes.amount,
@@ -136,6 +150,10 @@ export const CheckoutPage = () => {
         description: `Order #${createdOrder.orderNumber} (${paymentChoice} payment)`,
         image: '/logo.svg',
         order_id: paymentOrderRes.razorpayOrderId,
+        notes: {
+          phonepe_number: '6372556290',
+          phonepe_upi_id: '6372556290@ybl'
+        },
         handler: async function (response) {
           try {
             const verifyRes = await api.verifyPayment({
@@ -172,6 +190,40 @@ export const CheckoutPage = () => {
       notifyError(err.message || 'Failed to initiate order checkout');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Confirm direct PhonePe payment using UTR or instant approval
+  const handleConfirmPhonePePayment = async () => {
+    if (!phonePeModal) return;
+    setProcessing(true);
+
+    try {
+      const verifyRes = await api.verifyDirectUPI({
+        orderId: phonePeModal.order._id,
+        utr: utrInput,
+        phonePeNumber: phonePeModal.paymentOrder.phonePe?.number || '6372556290',
+        amount: phonePeModal.paymentOrder.amountInINR
+      });
+
+      if (verifyRes.success) {
+        clearCart();
+        setOrderSuccess(phonePeModal.order);
+        setPhonePeModal(null);
+        notifySuccess('PhonePe payment confirmed! Your boutique order has been placed.');
+      }
+    } catch (err) {
+      notifyError(err.message || 'Payment confirmation failed');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCopyUpi = (upiId) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(upiId);
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2500);
     }
   };
 
@@ -522,6 +574,58 @@ export const CheckoutPage = () => {
                 )}
               </div>
 
+              {/* Payment Method / Gateway Selector */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" style={{ marginBottom: '0.6rem', display: 'block', fontSize: '0.88rem', fontWeight: 600 }}>
+                  Choose Payment Method:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div
+                    onClick={() => setSelectedGateway('phonepe')}
+                    style={{
+                      border: selectedGateway === 'phonepe' ? '2px solid #5f259f' : '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.85rem',
+                      cursor: 'pointer',
+                      background: selectedGateway === 'phonepe' ? '#FAF5FF' : '#FFFFFF',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#5f259f', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Smartphone size={16} /> PhonePe / UPI
+                      </span>
+                      {selectedGateway === 'phonepe' && <CheckCircle2 size={16} color="#5f259f" />}
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Direct UPI & QR (6372556290)
+                    </span>
+                  </div>
+
+                  <div
+                    onClick={() => setSelectedGateway('razorpay')}
+                    style={{
+                      border: selectedGateway === 'razorpay' ? '2px solid var(--gold-primary)' : '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.85rem',
+                      cursor: 'pointer',
+                      background: selectedGateway === 'razorpay' ? 'var(--gold-lighter)' : '#FFFFFF',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--gold-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <CreditCard size={16} /> Razorpay Gateway
+                      </span>
+                      {selectedGateway === 'razorpay' && <CheckCircle2 size={16} color="var(--gold-dark)" />}
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Cards, NetBanking, All UPI
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1.5rem' }}>
                 <input
                   type="checkbox"
@@ -539,15 +643,157 @@ export const CheckoutPage = () => {
                 type="submit"
                 className="btn btn-primary btn-block btn-lg"
                 disabled={processing}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  background: selectedGateway === 'phonepe' ? '#5f259f' : 'var(--gold-primary)',
+                  borderColor: selectedGateway === 'phonepe' ? '#4a1b7e' : 'var(--gold-primary)'
+                }}
               >
-                <ShieldCheck size={20} />
-                <span>{processing ? 'Processing...' : `Pay ${formatINR(payableNow)} via Razorpay`}</span>
+                {selectedGateway === 'phonepe' ? <Smartphone size={20} /> : <ShieldCheck size={20} />}
+                <span>
+                  {processing
+                    ? 'Processing Order...'
+                    : selectedGateway === 'phonepe'
+                    ? `Pay ${formatINR(payableNow)} with PhonePe`
+                    : `Pay ${formatINR(payableNow)} via Razorpay`}
+                </span>
               </button>
             </div>
           </div>
         </form>
       </div>
+
+      {/* PhonePe Direct Payment Modal */}
+      {phonePeModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '490px', padding: '2rem 1.75rem', textAlign: 'center' }}>
+            {/* PhonePe Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#5f259f', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Smartphone size={26} color="#FFFFFF" />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <h3 style={{ fontSize: '1.25rem', margin: 0, color: '#5f259f', fontWeight: 700 }}>
+                  PhonePe Instant UPI
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Lavanya Collections Boutique
+                </span>
+              </div>
+            </div>
+
+            <div style={{ background: '#FAF5FF', border: '1px solid #E9D8FD', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem', borderBottom: '1px dashed #D6BCFA', paddingBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.88rem', color: '#5f259f', fontWeight: 600 }}>Payable Amount:</span>
+                <span style={{ fontSize: '1.35rem', fontWeight: 700, color: '#2D1B4E' }}>
+                  {formatINR(phonePeModal.paymentOrder.amountInINR)}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Order ID:</span>
+                  <strong>#{phonePeModal.order.orderNumber}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>PhonePe Number:</span>
+                  <strong style={{ color: '#5f259f' }}>+91 {phonePeModal.paymentOrder.phonePe?.number || '6372556290'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>UPI ID:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <code style={{ background: '#FFFFFF', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid #E2E8F0', fontSize: '0.82rem' }}>
+                      {phonePeModal.paymentOrder.phonePe?.upiId || '6372556290@ybl'}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyUpi(phonePeModal.paymentOrder.phonePe?.upiId || '6372556290@ybl')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#5f259f' }}
+                      title="Copy UPI ID"
+                    >
+                      {copiedUpi ? <Check size={14} color="#137333" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code Section */}
+            {phonePeModal.paymentOrder.phonePe?.qrCodeDataUrl ? (
+              <div style={{ marginBottom: '1.25rem', padding: '0.75rem', background: '#FFFFFF', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', display: 'inline-block' }}>
+                <img
+                  src={phonePeModal.paymentOrder.phonePe.qrCodeDataUrl}
+                  alt="PhonePe UPI QR Code"
+                  style={{ width: '180px', height: '180px', display: 'block', margin: '0 auto' }}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.4rem' }}>
+                  Scan with PhonePe or any UPI app
+                </span>
+              </div>
+            ) : null}
+
+            {/* Mobile 1-Click Pay Deep Link */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <a
+                href={phonePeModal.paymentOrder.phonePe?.phonepeIntentUrl || phonePeModal.paymentOrder.phonePe?.upiIntentUrl}
+                className="btn btn-primary btn-block"
+                style={{ background: '#5f259f', borderColor: '#4a1b7e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem' }}
+              >
+                <Smartphone size={18} />
+                <span>Open in PhonePe App to Pay</span>
+                <ExternalLink size={16} />
+              </a>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.3rem' }}>
+                (Tap if you are on mobile with PhonePe installed)
+              </span>
+            </div>
+
+            {/* UTR Input Form */}
+            <div style={{ textAlign: 'left', marginBottom: '1.25rem', background: 'var(--bg-cream)', padding: '0.85rem', borderRadius: 'var(--radius-sm)' }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                PhonePe UTR / 12-Digit Ref ID (Optional)
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. 428901234567"
+                value={utrInput}
+                onChange={(e) => setUtrInput(e.target.value)}
+                style={{ fontSize: '0.88rem' }}
+              />
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                From your PhonePe transaction details
+              </span>
+            </div>
+
+            {/* Confirmation Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <button
+                type="button"
+                onClick={handleConfirmPhonePePayment}
+                className="btn btn-primary btn-block"
+                disabled={processing}
+                style={{ background: '#137333', borderColor: '#0d5424', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              >
+                <CheckCircle2 size={18} />
+                <span>{processing ? 'Verifying...' : 'I Have Paid — Confirm Order'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPhonePeModal(null)}
+                className="btn btn-outline-dark btn-block"
+                disabled={processing}
+              >
+                Cancel / Choose Another Method
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Test Mode Mock Payment Modal */}
       {mockPaymentModal && (

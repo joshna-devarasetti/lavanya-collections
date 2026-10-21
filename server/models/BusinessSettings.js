@@ -54,6 +54,15 @@ const businessSettingsSchema = new mongoose.Schema({
     youtube: { type: String, default: '' },
     pinterest: { type: String, default: '' }
   },
+  paymentSettings: {
+    phonePeNumber: { type: String, default: '6372556290' },
+    upiId: { type: String, default: '6372556290@ybl' },
+    upiAccountName: { type: String, default: 'Lavanya Collections' },
+    razorpayKeyId: { type: String, default: '' },
+    razorpayKeySecret: { type: String, default: '' },
+    enablePhonePeDirect: { type: Boolean, default: true },
+    enableRazorpayGateway: { type: Boolean, default: true }
+  },
   policies: {
     returnPolicy: {
       type: String,

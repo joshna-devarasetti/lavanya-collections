@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   initiatePayment,
   verifyPayment,
+  verifyDirectUPI,
   handleWebhook,
   getAdminPayments
 } = require('../controllers/paymentController');
@@ -13,6 +14,9 @@ router.post('/create-order', optionalAuth, initiatePayment);
 
 // Verify signature
 router.post('/verify', optionalAuth, verifyPayment);
+
+// Verify Direct PhonePe / UPI payment
+router.post('/verify-direct-upi', optionalAuth, verifyDirectUPI);
 
 // Razorpay Webhook
 router.post('/webhook', handleWebhook);

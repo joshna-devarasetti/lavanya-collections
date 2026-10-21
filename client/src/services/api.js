@@ -76,6 +76,7 @@ export const api = {
   // Payments
   initiatePayment: (body) => request('/payments/create-order', { method: 'POST', body }),
   verifyPayment: (body) => request('/payments/verify', { method: 'POST', body }),
+  verifyDirectUPI: (body) => request('/payments/verify-direct-upi', { method: 'POST', body }),
   getAdminPayments: (params = '') => request(`/payments/admin/all${params ? `?${params}` : ''}`),
 
   // Rentals

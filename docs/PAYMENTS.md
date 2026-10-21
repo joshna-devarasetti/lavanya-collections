@@ -121,3 +121,28 @@ For orders with an outstanding balance (e.g. 80% remaining on custom frock or br
 4. Set Webhook URL in Razorpay Dashboard to:
    `https://your-domain.com/api/payments/webhook`
    with events: `payment.captured`, `payment.failed`.
+
+---
+
+## 8. PhonePe UPI Integration (Linked Number: 6372556290)
+
+The platform supports dual PhonePe processing:
+
+### Option A: Direct PhonePe & Dynamic UPI QR (Zero Gateway Fees)
+- **Merchant PhonePe Number**: `6372556290`
+- **Merchant PhonePe UPI ID**: `6372556290@ybl`
+- **Payee Name**: `Lavanya Collections`
+- **How it works**:
+  1. Customer selects **PhonePe / UPI** at checkout.
+  2. On Mobile: Tapping "Open in PhonePe App to Pay" triggers `phonepe://pay?pa=6372556290@ybl&pn=Lavanya%20Collections&am=...&cu=INR` directly in PhonePe.
+  3. On Desktop: Renders an instant, dynamically generated base64 QR code for scanning with PhonePe.
+  4. The customer submits their 12-digit PhonePe UTR reference. The system verifies and fulfills the order idempotently via `POST /api/payments/verify-direct-upi`.
+
+### Option B: Razorpay Settlement into PhonePe (6372556290)
+- To route all online card, netbanking, and Razorpay UPI payments directly into the bank account linked with PhonePe number `6372556290`:
+  1. Log in to [Razorpay Dashboard](https://dashboard.razorpay.com).
+  2. Navigate to **Account & Settings > Bank Accounts**.
+  3. Add the bank account or UPI ID associated with `6372556290`.
+  4. Razorpay will automatically settle daily collections directly into that account.
+  5. Enter your `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` in **Admin Dashboard > Settings > Razorpay & PhonePe Integration** or in `server/.env`.
+

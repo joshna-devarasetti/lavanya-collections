@@ -49,6 +49,14 @@ export const SettingsProvider = ({ children }) => {
     .filter(Boolean)
     .join(', ') || 'Hyderabad, Telangana, India';
 
+  const paymentSettings = settings?.paymentSettings || {
+    phonePeNumber: '6372556290',
+    upiId: '6372556290@ybl',
+    upiAccountName: 'Lavanya Collections',
+    enablePhonePeDirect: true,
+    enableRazorpayGateway: true
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -64,7 +72,8 @@ export const SettingsProvider = ({ children }) => {
         email: settings?.email || 'contact@lavanyacollections.com',
         address: settings?.address || {},
         formattedAddress,
-        policies: settings?.policies || {}
+        policies: settings?.policies || {},
+        paymentSettings
       }}
     >
       {children}

@@ -35,7 +35,8 @@ const updateSettings = async (req, res, next) => {
       flatShippingRate,
       freeShippingThreshold,
       socialLinks,
-      policies
+      policies,
+      paymentSettings
     } = req.body;
 
     if (storeName) settings.storeName = storeName;
@@ -49,6 +50,7 @@ const updateSettings = async (req, res, next) => {
     if (freeShippingThreshold !== undefined) settings.freeShippingThreshold = Number(freeShippingThreshold);
     if (socialLinks) settings.socialLinks = { ...settings.socialLinks, ...socialLinks };
     if (policies) settings.policies = { ...settings.policies, ...policies };
+    if (paymentSettings) settings.paymentSettings = { ...settings.paymentSettings, ...paymentSettings };
 
     await settings.save();
 

@@ -1,28 +1,45 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-const isRazorpayConfigured = () => {
-  const key = process.env.RAZORPAY_KEY_ID;
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  return (
-    key &&
+const isRazorpayConfigured = async () => {
+  let key = process.env.RAZORPAY_KEY_ID;
+  let secret = process.env.RAZORPAY_KEY_SECRET;
+
+  try {
+    const BusinessSettings = require('../models/BusinessSettings');
+    const settings = await BusinessSettings.findOne();
+    if (settings?.paymentSettings?.razorpayKeyId) {
+      key = settings.paymentSettings.razorpayKeyId;
+    }
+    if (settings?.paymentSettings?.razorpayKeySecret) {
+      secret = settings.paymentSettings.razorpayKeySecret;
+    }
+  } catch (err) {
+    // ignore, use env
+  }
+
+  const configured = key &&
     secret &&
     !key.includes('placeholder') &&
-    !secret.includes('placeholder')
-  );
+    !secret.includes('placeholder');
+
+  return { isConfigured: !!configured, key, secret };
 };
 
-let razorpayInstance = null;
-
-if (isRazorpayConfigured()) {
-  razorpayInstance = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-  });
-  console.log('[Razorpay] Gateway initialized with credentials.');
-} else {
-  console.log('[Razorpay] Operating in TEST / MOCK MODE. Real keys not provided.');
-}
+/**
+ * Get active Razorpay instance
+ */
+const getRazorpayInstance = async () => {
+  const { isConfigured, key, secret } = await isRazorpayConfigured();
+  if (isConfigured) {
+    return {
+      instance: new Razorpay({ key_id: key, key_secret: secret }),
+      keyId: key,
+      secret: secret
+    };
+  }
+  return { instance: null, keyId: null, secret: null };
+};
 
 /**
  * Create a Razorpay Order
@@ -32,15 +49,23 @@ if (isRazorpayConfigured()) {
  */
 const createRazorpayOrder = async (amountInINR, receiptId, notes = {}) => {
   const amountInPaise = Math.round(amountInINR * 100);
+  const { instance, keyId } = await getRazorpayInstance();
 
-  if (isRazorpayConfigured() && razorpayInstance) {
+  const enrichedNotes = {
+    phonepe_number: '6372556290',
+    phonepe_upi_id: '6372556290@ybl',
+    ...notes
+  };
+
+  if (instance) {
     const options = {
       amount: amountInPaise,
       currency: 'INR',
       receipt: receiptId.toString(),
-      notes: notes
+      notes: enrichedNotes
     };
-    return await razorpayInstance.orders.create(options);
+    const order = await instance.orders.create(options);
+    return { ...order, keyId };
   }
 
   // Realistic mock order for local testing and offline verification
@@ -54,9 +79,10 @@ const createRazorpayOrder = async (amountInINR, receiptId, notes = {}) => {
     currency: 'INR',
     receipt: receiptId.toString(),
     status: 'created',
-    notes: notes,
+    notes: enrichedNotes,
     created_at: Math.floor(Date.now() / 1000),
-    isMock: true
+    isMock: true,
+    keyId: 'rzp_test_placeholder_key_id'
   };
 };
 
@@ -66,19 +92,20 @@ const createRazorpayOrder = async (amountInINR, receiptId, notes = {}) => {
  * @param {string} razorpayPaymentId
  * @param {string} signature
  */
-const verifyPaymentSignature = (razorpayOrderId, razorpayPaymentId, signature) => {
-  if (!isRazorpayConfigured() || !signature || signature === 'mock_signature') {
+const verifyPaymentSignature = async (razorpayOrderId, razorpayPaymentId, signature) => {
+  const { isConfigured, secret } = await isRazorpayConfigured();
+  if (!isConfigured || !signature || signature === 'mock_signature') {
     // If running in mock/demo mode and order is mock
     if (razorpayOrderId.startsWith('order_mock_') || signature === 'mock_signature') {
       return true;
     }
   }
 
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!secret) return false;
+  const activeSecret = secret || process.env.RAZORPAY_KEY_SECRET;
+  if (!activeSecret) return false;
 
   const generatedSignature = crypto
-    .createHmac('sha256', secret)
+    .createHmac('sha256', activeSecret)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest('hex');
 
