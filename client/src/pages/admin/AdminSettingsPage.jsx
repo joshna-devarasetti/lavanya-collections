@@ -408,29 +408,29 @@ export const AdminSettingsPage = () => {
           </div>
         </div>
 
-        {/* SECTION: PAYMENT GATEWAY & PHONEPE UPI INTEGRATION */}
-        <div className="card" style={{ padding: '1.75rem', border: '1.5px solid var(--gold-primary)', background: '#FFFEFA' }}>
+        {/* SECTION: PHONEPE UPI PAYMENT INTEGRATION */}
+        <div className="card" style={{ padding: '1.75rem', border: '1.5px solid #5f259f', background: '#FFFEFA' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
-              <Smartphone size={20} color="var(--gold-dark)" />
-              <span>Razorpay & PhonePe UPI Integration</span>
+            <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0, color: '#5f259f' }}>
+              <Smartphone size={20} color="#5f259f" />
+              <span>PhonePe UPI Payment Integration</span>
             </h3>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#E6F4EA', color: '#137333', fontSize: '0.78rem', fontWeight: 600, padding: '0.3rem 0.75rem', borderRadius: '100px' }}>
-              <CheckCircle2 size={14} />
-              <span>PhonePe Linked: 6372556290</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#FAF5FF', color: '#5f259f', border: '1px solid #E9D8FD', fontSize: '0.78rem', fontWeight: 600, padding: '0.3rem 0.75rem', borderRadius: '100px' }}>
+              <CheckCircle2 size={14} color="#5f259f" />
+              <span>PhonePe Active: +91 6372556290</span>
             </span>
           </div>
 
-          <div style={{ background: 'var(--bg-cream)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', fontSize: '0.86rem', lineHeight: 1.5 }}>
-            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.25rem' }}>
-              Settlement & Payment Routing for 6372556290
+          <div style={{ background: '#FAF5FF', border: '1px solid #E9D8FD', padding: '1rem 1.25rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', fontSize: '0.86rem', lineHeight: 1.5 }}>
+            <strong style={{ color: '#5f259f', display: 'block', marginBottom: '0.25rem' }}>
+              Direct PhonePe Settlements for 6372556290
             </strong>
-            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-              Customer payments via PhonePe, UPI apps, and cards are securely handled. Direct UPI generates intent links and dynamic QR codes linked to your PhonePe VPA (<strong>{settings.paymentSettings?.upiId || '6372556290@ybl'}</strong>). To settle Razorpay gateway funds into this number, link your bank or UPI in your Razorpay Dashboard.
+            <p style={{ margin: 0, color: '#4A3B63' }}>
+              All customer payments on the storefront are processed directly via PhonePe UPI. Mobile customers pay with 1-click using the PhonePe app, and desktop customers scan dynamically generated UPI QR codes linked to your VPA (<strong>{settings.paymentSettings?.upiId || '6372556290@ybl'}</strong>). Money settles directly into your account with 0% gateway commission.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label">PhonePe Registered Number</label>
               <input
@@ -457,7 +457,7 @@ export const AdminSettingsPage = () => {
                 placeholder="6372556290@ybl"
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                e.g. 6372556290@ybl, 6372556290@ibl
+                e.g. 6372556290@ybl
               </span>
             </div>
 
@@ -472,63 +472,9 @@ export const AdminSettingsPage = () => {
                 placeholder="Lavanya Collections"
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Name shown to customers in PhonePe app
+                Beneficiary name shown on customer's PhonePe screen
               </span>
             </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">Razorpay Key ID</label>
-              <input
-                type="text"
-                name="razorpayKeyId"
-                value={settings.paymentSettings?.razorpayKeyId || ''}
-                onChange={handlePaymentSettingsChange}
-                className="form-input"
-                placeholder="rzp_live_... or rzp_test_..."
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                From Razorpay Dashboard → Settings → API Keys
-              </span>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Razorpay Key Secret</label>
-              <input
-                type="password"
-                name="razorpayKeySecret"
-                value={settings.paymentSettings?.razorpayKeySecret || ''}
-                onChange={handlePaymentSettingsChange}
-                className="form-input"
-                placeholder="••••••••••••••••"
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Private secret for HMAC-SHA256 signature verification
-              </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                name="enablePhonePeDirect"
-                checked={settings.paymentSettings?.enablePhonePeDirect !== false}
-                onChange={handlePaymentSettingsChange}
-              />
-              <span>Enable Direct PhonePe / UPI Intent & QR Code at Checkout</span>
-            </label>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                name="enableRazorpayGateway"
-                checked={settings.paymentSettings?.enableRazorpayGateway !== false}
-                onChange={handlePaymentSettingsChange}
-              />
-              <span>Enable Razorpay Standard Gateway (Cards, NetBanking, All UPI)</span>
-            </label>
           </div>
         </div>
 

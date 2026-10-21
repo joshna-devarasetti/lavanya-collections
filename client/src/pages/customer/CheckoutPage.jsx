@@ -29,11 +29,9 @@ export const CheckoutPage = () => {
 
   const [deliveryMethod, setDeliveryMethod] = useState('courier'); // 'courier' or 'store_pickup'
   const [paymentChoice, setPaymentChoice] = useState('advance'); // 'advance' or 'full'
-  const [selectedGateway, setSelectedGateway] = useState('phonepe'); // 'phonepe' or 'razorpay'
   const [policyAccepted, setPolicyAccepted] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
-  const [mockPaymentModal, setMockPaymentModal] = useState(null);
   const [phonePeModal, setPhonePeModal] = useState(null);
   const [utrInput, setUtrInput] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -116,76 +114,16 @@ export const CheckoutPage = () => {
 
       const createdOrder = orderRes.order;
 
-      // 2. Initiate payment order
+      // 2. Initiate PhonePe payment order
       const paymentOrderRes = await api.initiatePayment({ orderId: createdOrder._id });
       if (!paymentOrderRes.success) throw new Error(paymentOrderRes.message);
 
-      if (selectedGateway === 'phonepe') {
-        // Open PhonePe Instant UPI Modal
-        setPhonePeModal({
-          order: createdOrder,
-          paymentOrder: paymentOrderRes
-        });
-        setProcessing(false);
-        return;
-      }
-
-      // 3. Razorpay flow: check if running in mock/demo mode
-      if (paymentOrderRes.isMock || !window.Razorpay) {
-        // Open interactive Test Mode Simulator
-        setMockPaymentModal({
-          order: createdOrder,
-          paymentOrder: paymentOrderRes
-        });
-        setProcessing(false);
-        return;
-      }
-
-      // Launch official Razorpay Checkout SDK
-      const options = {
-        key: paymentOrderRes.keyId,
-        amount: paymentOrderRes.amount,
-        currency: 'INR',
-        name: 'Lavanya Collections',
-        description: `Order #${createdOrder.orderNumber} (${paymentChoice} payment)`,
-        image: '/logo.svg',
-        order_id: paymentOrderRes.razorpayOrderId,
-        notes: {
-          phonepe_number: '6372556290',
-          phonepe_upi_id: '6372556290@ybl'
-        },
-        handler: async function (response) {
-          try {
-            const verifyRes = await api.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            });
-
-            if (verifyRes.success) {
-              clearCart();
-              setOrderSuccess(createdOrder);
-              notifySuccess('Payment verified! Your order has been placed.');
-            }
-          } catch (vErr) {
-            notifyError(`Verification failed: ${vErr.message}`);
-          }
-        },
-        prefill: {
-          name: formData.name,
-          email: formData.email,
-          contact: formData.phone
-        },
-        theme: {
-          color: '#C59B27'
-        }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response) {
-        notifyError(`Payment failed: ${response.error.description}`);
+      // Open PhonePe Instant UPI Modal
+      setPhonePeModal({
+        order: createdOrder,
+        paymentOrder: paymentOrderRes
       });
-      rzp.open();
+      setProcessing(false);
     } catch (err) {
       notifyError(err.message || 'Failed to initiate order checkout');
     } finally {
@@ -224,32 +162,6 @@ export const CheckoutPage = () => {
       navigator.clipboard.writeText(upiId);
       setCopiedUpi(true);
       setTimeout(() => setCopiedUpi(false), 2500);
-    }
-  };
-
-  // Complete mock payment in test mode
-  const completeMockPayment = async () => {
-    if (!mockPaymentModal) return;
-    setProcessing(true);
-
-    try {
-      const verifyRes = await api.verifyPayment({
-        razorpay_order_id: mockPaymentModal.paymentOrder.razorpayOrderId,
-        razorpay_payment_id: `pay_mock_${Date.now()}`,
-        razorpay_signature: 'mock_signature',
-        paymentMethod: 'UPI / Razorpay Test'
-      });
-
-      if (verifyRes.success) {
-        clearCart();
-        setOrderSuccess(mockPaymentModal.order);
-        setMockPaymentModal(null);
-        notifySuccess('Test payment verified! Order confirmed.');
-      }
-    } catch (err) {
-      notifyError(err.message);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -574,56 +486,29 @@ export const CheckoutPage = () => {
                 )}
               </div>
 
-              {/* Payment Method / Gateway Selector */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label className="form-label" style={{ marginBottom: '0.6rem', display: 'block', fontSize: '0.88rem', fontWeight: 600 }}>
-                  Choose Payment Method:
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div
-                    onClick={() => setSelectedGateway('phonepe')}
-                    style={{
-                      border: selectedGateway === 'phonepe' ? '2px solid #5f259f' : '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      padding: '0.85rem',
-                      cursor: 'pointer',
-                      background: selectedGateway === 'phonepe' ? '#FAF5FF' : '#FFFFFF',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#5f259f', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Smartphone size={16} /> PhonePe / UPI
-                      </span>
-                      {selectedGateway === 'phonepe' && <CheckCircle2 size={16} color="#5f259f" />}
-                    </div>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Direct UPI & QR (6372556290)
-                    </span>
-                  </div>
-
-                  <div
-                    onClick={() => setSelectedGateway('razorpay')}
-                    style={{
-                      border: selectedGateway === 'razorpay' ? '2px solid var(--gold-primary)' : '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      padding: '0.85rem',
-                      cursor: 'pointer',
-                      background: selectedGateway === 'razorpay' ? 'var(--gold-lighter)' : '#FFFFFF',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--gold-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <CreditCard size={16} /> Razorpay Gateway
-                      </span>
-                      {selectedGateway === 'razorpay' && <CheckCircle2 size={16} color="var(--gold-dark)" />}
-                    </div>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Cards, NetBanking, All UPI
-                    </span>
-                  </div>
+              {/* Exclusive PhonePe UPI Payment Method */}
+              <div
+                style={{
+                  border: '2px solid #5f259f',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  marginBottom: '1.25rem',
+                  background: '#FAF5FF'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.98rem', color: '#5f259f', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Smartphone size={20} />
+                    <span>PhonePe UPI Payment</span>
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#5f259f', color: '#FFFFFF', fontSize: '0.72rem', fontWeight: 600, padding: '0.2rem 0.55rem', borderRadius: '100px' }}>
+                    <CheckCircle2 size={12} />
+                    <span>Official PhonePe</span>
+                  </span>
                 </div>
+                <p style={{ fontSize: '0.8rem', color: '#524365', margin: 0, lineHeight: 1.4 }}>
+                  Fast & secure UPI payment linked to PhonePe number <strong>+91 6372556290</strong> (<code>6372556290@ybl</code>). Pay via PhonePe App or scan dynamic QR.
+                </p>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -648,17 +533,16 @@ export const CheckoutPage = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.5rem',
-                  background: selectedGateway === 'phonepe' ? '#5f259f' : 'var(--gold-primary)',
-                  borderColor: selectedGateway === 'phonepe' ? '#4a1b7e' : 'var(--gold-primary)'
+                  background: '#5f259f',
+                  borderColor: '#4a1b7e',
+                  boxShadow: '0 4px 14px rgba(95, 37, 159, 0.25)'
                 }}
               >
-                {selectedGateway === 'phonepe' ? <Smartphone size={20} /> : <ShieldCheck size={20} />}
+                <Smartphone size={20} />
                 <span>
                   {processing
                     ? 'Processing Order...'
-                    : selectedGateway === 'phonepe'
-                    ? `Pay ${formatINR(payableNow)} with PhonePe`
-                    : `Pay ${formatINR(payableNow)} via Razorpay`}
+                    : `Pay ${formatINR(payableNow)} with PhonePe`}
                 </span>
               </button>
             </div>
@@ -788,54 +672,7 @@ export const CheckoutPage = () => {
                 className="btn btn-outline-dark btn-block"
                 disabled={processing}
               >
-                Cancel / Choose Another Method
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Test Mode Mock Payment Modal */}
-      {mockPaymentModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '480px', textAlign: 'center' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--gold-lighter)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-              <CreditCard size={28} color="var(--gold-primary)" />
-            </div>
-
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>Razorpay Test Mode Simulator</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
-              Live Razorpay API keys are not configured in this development environment. This interactive test simulator verifies the complete signature verification and order confirmation flow.
-            </p>
-
-            <div style={{ background: 'var(--bg-cream)', padding: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'left', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span>Order Reference:</span>
-                <strong>#{mockPaymentModal.order.orderNumber}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span>Amount Due Today:</span>
-                <strong>{formatINR(mockPaymentModal.paymentOrder.amountInINR)}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Method:</span>
-                <span>UPI / Debit Card (Simulated)</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button
-                onClick={completeMockPayment}
-                className="btn btn-primary btn-block"
-                disabled={processing}
-              >
-                {processing ? 'Verifying...' : 'Simulate Successful Payment'}
-              </button>
-              <button
-                onClick={() => setMockPaymentModal(null)}
-                className="btn btn-outline-dark btn-block"
-              >
-                Cancel Payment
+                Cancel / Edit Order
               </button>
             </div>
           </div>

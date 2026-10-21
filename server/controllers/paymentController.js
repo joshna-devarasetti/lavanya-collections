@@ -75,44 +75,38 @@ const initiatePayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Payable amount must be greater than zero.' });
     }
 
-    // Fetch PhonePe & Razorpay business settings
+    // Fetch PhonePe business settings
     const settings = await BusinessSettings.findOne();
     const phonePeNumber = settings?.paymentSettings?.phonePeNumber || process.env.PHONEPE_NUMBER || '6372556290';
     const upiId = settings?.paymentSettings?.upiId || process.env.PHONEPE_UPI_ID || `${phonePeNumber}@ybl`;
     const upiAccountName = settings?.paymentSettings?.upiAccountName || 'Lavanya Collections';
 
-    // Call Razorpay API to generate order
-    const receipt = entityType === 'order' ? targetEntity.orderNumber : targetEntity.requestNumber;
-    const rzpOrder = await createRazorpayOrder(payableAmountINR, receipt, {
-      entityType,
-      entityId: targetEntity._id.toString(),
-      paymentType,
-      phonepe_number: phonePeNumber,
-      phonepe_upi_id: upiId
-    });
+    const orderRef = entityType === 'order' ? targetEntity.orderNumber : targetEntity.requestNumber;
+    const phonepeOrderId = `phonepe_ord_${orderRef}_${Date.now()}`;
 
-    // Save Payment record in DB
+    // Save Payment record in DB with PhonePe gateway
     const payment = await Payment.create({
       order: entityType === 'order' ? targetEntity._id : undefined,
       customRequest: entityType === 'custom_request' ? targetEntity._id : undefined,
       customer: req.user ? req.user._id : targetEntity.customer,
       paymentType,
       amount: payableAmountINR,
-      amountInPaise: rzpOrder.amount,
+      amountInPaise: Math.round(payableAmountINR * 100),
       currency: 'INR',
-      gateway: 'razorpay',
-      razorpayOrderId: rzpOrder.id,
+      gateway: 'phonepe',
+      phonePeNumber,
+      transactionRef: phonepeOrderId,
+      razorpayOrderId: phonepeOrderId,
       status: 'created'
     });
 
     if (entityType === 'order') {
-      targetEntity.razorpayOrderId = rzpOrder.id;
+      targetEntity.razorpayOrderId = phonepeOrderId;
       await targetEntity.save();
     }
 
     // Build standard Indian UPI Intent and PhonePe Deep-link URLs
     const encodedName = encodeURIComponent(upiAccountName);
-    const orderRef = entityType === 'order' ? targetEntity.orderNumber : targetEntity.requestNumber;
     const upiIntentUrl = `upi://pay?pa=${upiId}&pn=${encodedName}&am=${payableAmountINR}&cu=INR&tn=Order_${orderRef}`;
     const phonepeIntentUrl = `phonepe://pay?pa=${upiId}&pn=${encodedName}&am=${payableAmountINR}&cu=INR&tn=Order_${orderRef}`;
 
@@ -134,15 +128,14 @@ const initiatePayment = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Payment order created.',
+      message: 'PhonePe payment initialized.',
       paymentId: payment._id,
-      razorpayOrderId: rzpOrder.id,
-      amount: rzpOrder.amount, // in paise
+      phonepeOrderId,
+      razorpayOrderId: phonepeOrderId,
+      amount: Math.round(payableAmountINR * 100),
       amountInINR: payableAmountINR,
       currency: 'INR',
-      keyId: rzpOrder.keyId || process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
       customerDetails: targetEntity.customerDetails,
-      isMock: !!rzpOrder.isMock,
       phonePe: {
         number: phonePeNumber,
         upiId: upiId,
@@ -424,14 +417,18 @@ const verifyDirectUPI = async (req, res, next) => {
         amount: payableAmount,
         amountInPaise: Math.round(payableAmount * 100),
         currency: 'INR',
-        gateway: 'manual_upi',
+        gateway: 'phonepe',
+        phonePeNumber,
+        transactionRef,
         razorpayOrderId: `phonepe_upi_${Date.now()}`,
         status: 'created'
       });
     }
 
     payment.status = 'verified';
-    payment.gateway = 'manual_upi';
+    payment.gateway = 'phonepe';
+    payment.phonePeNumber = phonePeNumber;
+    payment.transactionRef = transactionRef;
     payment.paymentMethod = `PhonePe UPI (${phonePeNumber})`;
     payment.razorpayPaymentId = transactionRef;
     payment.verifiedAt = new Date();

@@ -53,8 +53,7 @@ export const SettingsProvider = ({ children }) => {
     phonePeNumber: '6372556290',
     upiId: '6372556290@ybl',
     upiAccountName: 'Lavanya Collections',
-    enablePhonePeDirect: true,
-    enableRazorpayGateway: true
+    enablePhonePeDirect: true
   };
 
   return (

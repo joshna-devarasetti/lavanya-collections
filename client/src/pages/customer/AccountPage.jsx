@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ShoppingBag, Palette, User as UserIcon, Calendar, CheckCircle2, XCircle, CreditCard, ExternalLink, Sparkles } from 'lucide-react';
+import { ShoppingBag, Palette, User as UserIcon, Calendar, CheckCircle2, XCircle, CreditCard, ExternalLink, Sparkles, Smartphone, Copy, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { api } from '../../services/api';
@@ -17,8 +17,10 @@ export const AccountPage = () => {
   const [customRequests, setCustomRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal for Quotation payment in mock mode
+  // Modal for Quotation payment via PhonePe
   const [quotationPayModal, setQuotationPayModal] = useState(null);
+  const [quotationUtrInput, setQuotationUtrInput] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
@@ -74,73 +76,45 @@ export const AccountPage = () => {
       const paymentOrderRes = await api.initiatePayment({ customRequestId: request._id });
       if (!paymentOrderRes.success) throw new Error(paymentOrderRes.message);
 
-      if (paymentOrderRes.isMock || !window.Razorpay) {
-        setQuotationPayModal({
-          request,
-          paymentOrder: paymentOrderRes
-        });
-        return;
-      }
-
-      const options = {
-        key: paymentOrderRes.keyId,
-        amount: paymentOrderRes.amount,
-        currency: 'INR',
-        name: 'Lavanya Collections',
-        description: `Advance for Custom Request #${request.requestNumber}`,
-        order_id: paymentOrderRes.razorpayOrderId,
-        handler: async function (response) {
-          try {
-            const verifyRes = await api.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            });
-            if (verifyRes.success) {
-              notifySuccess('Advance payment verified! Your custom piece is now in production.');
-              const custRes = await api.getMyCustomRequests();
-              if (custRes.success) setCustomRequests(custRes.requests);
-            }
-          } catch (e) {
-            notifyError(e.message);
-          }
-        },
-        prefill: {
-          name: user?.name,
-          email: user?.email,
-          contact: user?.phone
-        },
-        theme: { color: '#C59B27' }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      setQuotationPayModal({
+        request,
+        paymentOrder: paymentOrderRes
+      });
     } catch (err) {
       notifyError(err.message || 'Payment initiation failed.');
     }
   };
 
-  const completeMockQuotationPayment = async () => {
+  const handleConfirmPhonePeQuotation = async () => {
     if (!quotationPayModal) return;
     setPaying(true);
     try {
-      const verifyRes = await api.verifyPayment({
-        razorpay_order_id: quotationPayModal.paymentOrder.razorpayOrderId,
-        razorpay_payment_id: `pay_mock_${Date.now()}`,
-        razorpay_signature: 'mock_signature',
-        paymentMethod: 'UPI / Razorpay Test'
+      const verifyRes = await api.verifyDirectUPI({
+        customRequestId: quotationPayModal.request._id,
+        utr: quotationUtrInput,
+        phonePeNumber: quotationPayModal.paymentOrder.phonePe?.number || '6372556290',
+        amount: quotationPayModal.paymentOrder.amountInINR
       });
 
       if (verifyRes.success) {
-        notifySuccess('Advance payment verified! Custom design is now in production.');
+        notifySuccess('PhonePe advance payment verified! Your custom piece is now in production.');
         setQuotationPayModal(null);
+        setQuotationUtrInput('');
         const custRes = await api.getMyCustomRequests();
         if (custRes.success) setCustomRequests(custRes.requests);
       }
     } catch (err) {
-      notifyError(err.message);
+      notifyError(err.message || 'Payment confirmation failed.');
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleCopyQuotationUpi = (upiId) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(upiId);
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2500);
     }
   };
 
@@ -396,31 +370,110 @@ export const AccountPage = () => {
         )}
       </div>
 
-      {/* Mock Modal for Custom Request Advance Payment in test mode */}
+      {/* PhonePe Modal for Custom Request Advance Payment */}
       {quotationPayModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '460px', textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Custom Quotation Advance Payment</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
-              Test Mode Simulator: Confirm advance payment to transition your design into production.
-            </p>
-
-            <div style={{ background: 'var(--bg-cream)', padding: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'left', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span>Custom Request:</span>
-                <strong>#{quotationPayModal.request.requestNumber}</strong>
+          <div className="modal-content" style={{ maxWidth: '480px', padding: '2rem 1.75rem', textAlign: 'center' }}>
+            {/* PhonePe Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#5f259f', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Smartphone size={26} color="#FFFFFF" />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span>Advance Payable Today:</span>
-                <strong>{formatINR(quotationPayModal.paymentOrder.amountInINR)}</strong>
+              <div style={{ textAlign: 'left' }}>
+                <h3 style={{ fontSize: '1.25rem', margin: 0, color: '#5f259f', fontWeight: 700 }}>
+                  PhonePe Advance Payment
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Custom Design #{quotationPayModal.request.requestNumber}
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button onClick={completeMockQuotationPayment} className="btn btn-primary btn-block" disabled={paying}>
-                {paying ? 'Verifying...' : 'Simulate Verified Payment'}
+            <div style={{ background: '#FAF5FF', border: '1px solid #E9D8FD', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem', borderBottom: '1px dashed #D6BCFA', paddingBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.88rem', color: '#5f259f', fontWeight: 600 }}>Advance Payable:</span>
+                <span style={{ fontSize: '1.35rem', fontWeight: 700, color: '#2D1B4E' }}>
+                  {formatINR(quotationPayModal.paymentOrder.amountInINR)}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>PhonePe Number:</span>
+                  <strong style={{ color: '#5f259f' }}>+91 {quotationPayModal.paymentOrder.phonePe?.number || '6372556290'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>UPI ID:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <code style={{ background: '#FFFFFF', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid #E2E8F0', fontSize: '0.82rem' }}>
+                      {quotationPayModal.paymentOrder.phonePe?.upiId || '6372556290@ybl'}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyQuotationUpi(quotationPayModal.paymentOrder.phonePe?.upiId || '6372556290@ybl')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#5f259f' }}
+                      title="Copy UPI ID"
+                    >
+                      {copiedUpi ? <Check size={14} color="#137333" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            {quotationPayModal.paymentOrder.phonePe?.qrCodeDataUrl && (
+              <div style={{ marginBottom: '1.25rem', padding: '0.75rem', background: '#FFFFFF', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', display: 'inline-block' }}>
+                <img
+                  src={quotationPayModal.paymentOrder.phonePe.qrCodeDataUrl}
+                  alt="PhonePe UPI QR Code"
+                  style={{ width: '170px', height: '170px', display: 'block', margin: '0 auto' }}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.4rem' }}>
+                  Scan with PhonePe or any UPI app
+                </span>
+              </div>
+            )}
+
+            {/* Mobile App Intent */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <a
+                href={quotationPayModal.paymentOrder.phonePe?.phonepeIntentUrl || quotationPayModal.paymentOrder.phonePe?.upiIntentUrl}
+                className="btn btn-primary btn-block"
+                style={{ background: '#5f259f', borderColor: '#4a1b7e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem' }}
+              >
+                <Smartphone size={18} />
+                <span>Open in PhonePe App to Pay</span>
+                <ExternalLink size={16} />
+              </a>
+            </div>
+
+            {/* UTR Input */}
+            <div style={{ textAlign: 'left', marginBottom: '1.25rem', background: 'var(--bg-cream)', padding: '0.85rem', borderRadius: 'var(--radius-sm)' }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                PhonePe UTR / 12-Digit Reference (Optional)
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. 428901234567"
+                value={quotationUtrInput}
+                onChange={(e) => setQuotationUtrInput(e.target.value)}
+                style={{ fontSize: '0.88rem' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <button
+                onClick={handleConfirmPhonePeQuotation}
+                className="btn btn-primary btn-block"
+                disabled={paying}
+                style={{ background: '#137333', borderColor: '#0d5424', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              >
+                <CheckCircle2 size={18} />
+                <span>{paying ? 'Verifying...' : 'I Have Paid — Confirm Advance'}</span>
               </button>
-              <button onClick={() => setQuotationPayModal(null)} className="btn btn-outline-dark btn-block">
+              <button onClick={() => setQuotationPayModal(null)} className="btn btn-outline-dark btn-block" disabled={paying}>
                 Cancel
               </button>
             </div>

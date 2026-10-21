@@ -35,7 +35,7 @@ export const AdminPaymentsPage = () => {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Payment Transactions & Gateway Ledger</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Official Razorpay payment transactions, cryptographic signature verifications, and advance ledger
+          Official PhonePe UPI transactions, UTR verifications, and advance ledger
         </p>
       </div>
 
@@ -107,11 +107,11 @@ export const AdminPaymentsPage = () => {
                   </td>
                   <td>
                     <span style={{ display: 'block', fontSize: '0.82rem', fontFamily: 'monospace' }}>
-                      Rzp Order: {p.razorpayOrderId}
+                      {p.transactionRef || p.razorpayOrderId || p._id}
                     </span>
-                    {p.razorpayPaymentId && (
+                    {(p.razorpayPaymentId || p.transactionRef) && (
                       <span style={{ display: 'block', fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                        Pay ID: {p.razorpayPaymentId}
+                        UTR / Ref: {p.razorpayPaymentId || p.transactionRef}
                       </span>
                     )}
                   </td>

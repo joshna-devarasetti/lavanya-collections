@@ -33,12 +33,19 @@ const paymentSchema = new mongoose.Schema({
   },
   gateway: {
     type: String,
-    enum: ['razorpay', 'manual_upi', 'cash_on_delivery'],
-    default: 'razorpay'
+    enum: ['phonepe', 'manual_upi', 'cash_on_delivery', 'razorpay'],
+    default: 'phonepe'
+  },
+  transactionRef: {
+    type: String
+  },
+  phonePeNumber: {
+    type: String,
+    default: '6372556290'
   },
   razorpayOrderId: {
     type: String,
-    required: true
+    required: false
   },
   razorpayPaymentId: {
     type: String

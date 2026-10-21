@@ -181,7 +181,7 @@ export const CartPage = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
               <ShieldCheck size={15} color="var(--status-success)" />
-              <span>100% Secure Checkout powered by Razorpay</span>
+              <span>100% Secure Checkout powered by PhonePe UPI</span>
             </div>
           </div>
         </div>

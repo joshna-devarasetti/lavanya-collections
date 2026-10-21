@@ -64,7 +64,7 @@ export const AdminDashboardPage = () => {
           <h2 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}>
             {formatINR(metrics?.totalRevenue || 0)}
           </h2>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confirmed Razorpay payments</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confirmed PhonePe payments</span>
         </div>
 
         {/* Outstanding Balances */}
