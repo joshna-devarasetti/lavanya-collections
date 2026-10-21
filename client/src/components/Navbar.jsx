@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Search, User as UserIcon, Menu, X, Sparkles, MessageCircle, QrCode } from 'lucide-react';
+import { ShoppingBag, Search, User as UserIcon, Menu, X, Sparkles, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { QrCodeModal } from './QrCodeModal';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
@@ -11,7 +10,6 @@ export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [qrModalOpen, setQrModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSearchSubmit = (e) => {
@@ -176,28 +174,6 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* QR Code / Mobile Scan Button */}
-          <button
-            onClick={() => setQrModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              background: 'var(--bg-ivory)',
-              border: '1px solid var(--border-subtle)',
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              cursor: 'pointer',
-              color: 'var(--text-primary)',
-              fontSize: '0.8rem',
-              fontWeight: 600
-            }}
-            title="Scan QR Code to open on mobile"
-          >
-            <QrCode size={16} color="var(--gold-dark)" />
-            <span className="desktop-only">Mobile View</span>
-          </button>
-
           {/* Cart Icon */}
           <Link
             to="/cart"
@@ -321,8 +297,6 @@ export const Navbar = () => {
           </div>
         </div>
       )}
-
-      <QrCodeModal isOpen={qrModalOpen} onClose={() => setQrModalOpen(false)} />
 
       <style>{`
         @media (max-width: 768px) {
