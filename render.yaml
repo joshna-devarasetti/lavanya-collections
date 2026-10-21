@@ -13,5 +13,15 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
+      - key: ADMIN_EMAIL
+        value: lavanyacollections@gmail.com
+      - key: ADMIN_PASSWORD
+        value: lavanyacollect
+      - key: PHONEPE_NUMBER
+        value: "6372556290"
+      - key: PHONEPE_UPI_ID
+        value: "6372556290@ybl"
+      - key: MERCHANT_UPI_NAME
+        value: "Lavanya Collections"
       - key: MONGODB_URI
         sync: false
