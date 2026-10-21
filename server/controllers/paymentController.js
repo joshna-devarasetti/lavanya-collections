@@ -374,6 +374,21 @@ const verifyDirectUPI = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'orderId or customRequestId is required.' });
     }
 
+    if (!utr || !utr.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'PhonePe Transaction ID / UTR is mandatory to verify your payment. Please enter the transaction ID from your PhonePe app.'
+      });
+    }
+
+    const transactionRef = utr.trim();
+    if (transactionRef.length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid PhonePe Transaction ID / UTR.'
+      });
+    }
+
     let targetEntity = null;
     let entityType = '';
     let payableAmount = 0;
@@ -398,21 +413,6 @@ const verifyDirectUPI = async (req, res, next) => {
       if (!targetEntity) return res.status(404).json({ success: false, message: 'Custom request not found.' });
       entityType = 'custom_request';
       payableAmount = targetEntity.quotation?.advanceAmount || 0;
-    }
-
-    if (!utr || !utr.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'PhonePe Transaction ID / UTR is mandatory to verify your payment. Please enter the transaction ID from your PhonePe app.'
-      });
-    }
-
-    const transactionRef = utr.trim();
-    if (transactionRef.length < 4) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter a valid PhonePe Transaction ID / UTR.'
-      });
     }
 
     // Create or find payment record
