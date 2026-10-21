@@ -146,11 +146,11 @@ test('Rental Availability: Prevents Double-Booking Overlapping Dates', async (t)
 
 test('Payments: HMAC SHA256 Signature Verification', async (t) => {
   // Test mock signature handling in development/mock mode
-  const isMockValid = verifyPaymentSignature('order_mock_12345', 'pay_mock_12345', 'mock_signature');
+  const isMockValid = await verifyPaymentSignature('order_mock_12345', 'pay_mock_12345', 'mock_signature');
   assert.strictEqual(isMockValid, true, 'Mock signature verification should pass for mock orders');
 
   // Test invalid signature rejection
   process.env.RAZORPAY_KEY_SECRET = 'sample_secret_key';
-  const isInvalid = verifyPaymentSignature('order_real_123', 'pay_real_456', 'tampered_signature');
+  const isInvalid = await verifyPaymentSignature('order_real_123', 'pay_real_456', 'tampered_signature');
   assert.strictEqual(isInvalid, false, 'Tampered or invalid signature must be rejected');
 });

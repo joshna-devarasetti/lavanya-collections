@@ -128,6 +128,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  transactionId: {
+    type: String,
+    default: ''
+  },
   razorpayOrderId: String,
   policyAccepted: {
     type: Boolean,

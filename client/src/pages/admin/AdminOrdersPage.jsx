@@ -206,6 +206,11 @@ export const AdminOrdersPage = () => {
                       <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                         Paid: {formatINR(ord.amountPaid)} | Due: {formatINR(ord.balanceAmount)}
                       </span>
+                      {ord.transactionId && (
+                        <span style={{ display: 'block', fontSize: '0.73rem', fontFamily: 'monospace', color: '#5f259f', marginTop: '0.25rem', fontWeight: 600 }}>
+                          UTR: {ord.transactionId}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td>
@@ -276,6 +281,30 @@ export const AdminOrdersPage = () => {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
+              </div>
+            </div>
+
+            {/* PhonePe Payment & UTR Verification Box */}
+            <div style={{ background: '#FAF5FF', border: '1.5px solid #D6BCFA', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#5f259f', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  PhonePe Payment Verification
+                </span>
+                <div style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Transaction ID / UTR:</span>
+                  <strong style={{ fontSize: '1rem', fontFamily: 'monospace', color: '#2D1B4E', background: '#FFFFFF', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1.5px solid #9F7AEA' }}>
+                    {selectedOrder.transactionId || 'Not provided'}
+                  </strong>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Amount Paid:</span>
+                <h3 style={{ fontSize: '1.3rem', color: '#137333', margin: 0 }}>{formatINR(selectedOrder.amountPaid)}</h3>
+                {selectedOrder.balanceAmount > 0 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-rent)', display: 'block' }}>
+                    Balance Due on Delivery: {formatINR(selectedOrder.balanceAmount)}
+                  </span>
+                )}
               </div>
             </div>
 

@@ -131,22 +131,34 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Confirm direct PhonePe payment using UTR or instant approval
+  // Confirm direct PhonePe payment using mandatory UTR
   const handleConfirmPhonePePayment = async () => {
     if (!phonePeModal) return;
+
+    const trimmedUtr = (utrInput || '').trim();
+    if (!trimmedUtr) {
+      notifyError('Transaction ID is mandatory! Please enter the PhonePe Transaction ID / UTR to verify your payment.');
+      return;
+    }
+
+    if (trimmedUtr.length < 4) {
+      notifyError('Please enter a valid PhonePe Transaction ID / UTR.');
+      return;
+    }
+
     setProcessing(true);
 
     try {
       const verifyRes = await api.verifyDirectUPI({
         orderId: phonePeModal.order._id,
-        utr: utrInput,
+        utr: trimmedUtr,
         phonePeNumber: phonePeModal.paymentOrder.phonePe?.number || '6372556290',
         amount: phonePeModal.paymentOrder.amountInINR
       });
 
       if (verifyRes.success) {
         clearCart();
-        setOrderSuccess(phonePeModal.order);
+        setOrderSuccess(verifyRes.order || phonePeModal.order);
         setPhonePeModal(null);
         notifySuccess('PhonePe payment confirmed! Your boutique order has been placed.');
       }
@@ -200,6 +212,12 @@ export const CheckoutPage = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-rent)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.4rem', marginTop: '0.4rem' }}>
                 <span>Remaining Balance Due on Delivery:</span>
                 <strong>{formatINR(orderSuccess.balanceAmount)}</strong>
+              </div>
+            )}
+            {orderSuccess.transactionId && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-subtle)', paddingTop: '0.4rem', marginTop: '0.4rem' }}>
+                <span>PhonePe Transaction ID:</span>
+                <strong style={{ fontFamily: 'monospace', color: '#5f259f' }}>{orderSuccess.transactionId}</strong>
               </div>
             )}
           </div>
@@ -635,21 +653,22 @@ export const CheckoutPage = () => {
               </span>
             </div>
 
-            {/* UTR Input Form */}
-            <div style={{ textAlign: 'left', marginBottom: '1.25rem', background: 'var(--bg-cream)', padding: '0.85rem', borderRadius: 'var(--radius-sm)' }}>
-              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.35rem' }}>
-                PhonePe UTR / 12-Digit Ref ID (Optional)
+            {/* Mandatory UTR / Transaction ID Input Form */}
+            <div style={{ textAlign: 'left', marginBottom: '1.25rem', background: '#FFFDF5', border: '1px solid #F6E05E', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: '0.4rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                PhonePe Transaction ID / UTR <span style={{ color: '#C53030' }}>* (Mandatory)</span>
               </label>
               <input
                 type="text"
+                required
                 className="form-input"
-                placeholder="e.g. 428901234567"
+                placeholder="e.g. T26102112345678 or 428901234567"
                 value={utrInput}
                 onChange={(e) => setUtrInput(e.target.value)}
-                style={{ fontSize: '0.88rem' }}
+                style={{ fontSize: '0.9rem', border: '1.5px solid #D69E2E', background: '#FFFFFF' }}
               />
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                From your PhonePe transaction details
+              <span style={{ fontSize: '0.74rem', color: '#744210', display: 'block', marginTop: '0.4rem', lineHeight: 1.4 }}>
+                ⚠️ <strong>Required for Verification</strong>: Open your PhonePe app &gt; History &gt; Click this payment &gt; Copy the <strong>12-digit UTR / Transaction ID</strong> and paste it above to verify your transfer.
               </span>
             </div>
 

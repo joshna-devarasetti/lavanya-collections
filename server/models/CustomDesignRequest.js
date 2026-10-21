@@ -107,6 +107,10 @@ const customDesignRequestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order'
   },
+  transactionId: {
+    type: String,
+    default: ''
+  },
   adminNotes: String
 }, {
   timestamps: true

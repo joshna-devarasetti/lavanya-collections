@@ -184,6 +184,11 @@ export const AdminCustomRequestsPage = () => {
                         <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold-dark)' }}>
                           Adv {r.quotation.advancePercentage}%: {formatINR(r.quotation.advanceAmount)}
                         </span>
+                        {r.transactionId && (
+                          <span style={{ display: 'block', fontSize: '0.73rem', fontFamily: 'monospace', color: '#5f259f', marginTop: '0.2rem', fontWeight: 600 }}>
+                            UTR: {r.transactionId}
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Not Quoted</span>
@@ -252,6 +257,29 @@ export const AdminCustomRequestsPage = () => {
               <div><strong>Customer Name:</strong> {detailModal.customerDetails?.name}</div>
               <div><strong>Customer Phone:</strong> {detailModal.customerDetails?.phone}</div>
             </div>
+
+            {/* PhonePe Advance Payment Verification Box */}
+            {detailModal.transactionId && (
+              <div style={{ background: '#FAF5FF', border: '1.5px solid #D6BCFA', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#5f259f', fontWeight: 700, textTransform: 'uppercase' }}>
+                    PhonePe Advance Payment Verified
+                  </span>
+                  <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Transaction ID / UTR:</span>
+                    <strong style={{ fontSize: '0.95rem', fontFamily: 'monospace', color: '#2D1B4E', background: '#FFFFFF', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid #9F7AEA' }}>
+                      {detailModal.transactionId}
+                    </strong>
+                  </div>
+                </div>
+                {detailModal.quotation?.advanceAmount && (
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Advance Received:</span>
+                    <strong style={{ fontSize: '1.1rem', color: '#137333', display: 'block' }}>{formatINR(detailModal.quotation.advanceAmount)}</strong>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Reference Photos */}
             {detailModal.referenceImages && detailModal.referenceImages.length > 0 && (

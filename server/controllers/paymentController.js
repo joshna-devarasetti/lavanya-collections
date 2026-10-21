@@ -400,7 +400,20 @@ const verifyDirectUPI = async (req, res, next) => {
       payableAmount = targetEntity.quotation?.advanceAmount || 0;
     }
 
-    const transactionRef = utr && utr.trim() ? utr.trim() : `PHONEPE_UTR_${Date.now()}`;
+    if (!utr || !utr.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'PhonePe Transaction ID / UTR is mandatory to verify your payment. Please enter the transaction ID from your PhonePe app.'
+      });
+    }
+
+    const transactionRef = utr.trim();
+    if (transactionRef.length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid PhonePe Transaction ID / UTR.'
+      });
+    }
 
     // Create or find payment record
     let payment = await Payment.findOne({
@@ -436,6 +449,7 @@ const verifyDirectUPI = async (req, res, next) => {
 
     // Process Order fulfillment
     if (entityType === 'order') {
+      targetEntity.transactionId = transactionRef;
       targetEntity.amountPaid += payableAmount;
       targetEntity.balanceAmount = Math.max(0, targetEntity.totalAmount - targetEntity.amountPaid);
       targetEntity.paymentStatus = targetEntity.balanceAmount <= 0 ? 'fully_paid' : 'partially_paid';
@@ -463,9 +477,9 @@ const verifyDirectUPI = async (req, res, next) => {
         recipientRole: 'admin',
         type: 'payment_verified',
         title: 'PhonePe Payment Received',
-        message: `PhonePe payment of ₹${payableAmount} verified for Order #${targetEntity.orderNumber} (Ref: ${transactionRef}, PhonePe: ${phonePeNumber}).`,
+        message: `PhonePe payment of ₹${payableAmount} verified for Order #${targetEntity.orderNumber} (Transaction ID: ${transactionRef}, PhonePe: ${phonePeNumber}).`,
         link: '/admin/orders',
-        data: { orderId: targetEntity._id, paymentId: payment._id }
+        data: { orderId: targetEntity._id, paymentId: payment._id, transactionId: transactionRef }
       });
 
       if (targetEntity.customerDetails?.phone) {
@@ -475,12 +489,13 @@ const verifyDirectUPI = async (req, res, next) => {
           recipientPhone: targetEntity.customerDetails.phone,
           type: 'payment_verified',
           title: 'PhonePe Payment Received!',
-          message: `Thank you! Your PhonePe payment of ₹${payableAmount} for Order #${targetEntity.orderNumber} is confirmed (UTR: ${transactionRef}).`,
+          message: `Thank you! Your PhonePe payment of ₹${payableAmount} for Order #${targetEntity.orderNumber} is confirmed (Transaction ID: ${transactionRef}).`,
           link: '/account/orders',
-          data: { orderId: targetEntity._id }
+          data: { orderId: targetEntity._id, transactionId: transactionRef }
         });
       }
     } else {
+      targetEntity.transactionId = transactionRef;
       targetEntity.status = 'in_production';
       if (targetEntity.quotation) {
         targetEntity.quotation.customerResponse = 'accepted';
@@ -492,9 +507,9 @@ const verifyDirectUPI = async (req, res, next) => {
         recipientRole: 'admin',
         type: 'quotation_approved',
         title: 'Custom Quotation Paid via PhonePe',
-        message: `Customer ${targetEntity.customerDetails?.name} paid advance ₹${payableAmount} via PhonePe (Ref: ${transactionRef}) for Custom Design #${targetEntity.requestNumber}.`,
+        message: `Customer ${targetEntity.customerDetails?.name} paid advance ₹${payableAmount} via PhonePe (Transaction ID: ${transactionRef}) for Custom Design #${targetEntity.requestNumber}.`,
         link: '/admin/custom-requests',
-        data: { customRequestId: targetEntity._id }
+        data: { customRequestId: targetEntity._id, transactionId: transactionRef }
       });
     }
 
