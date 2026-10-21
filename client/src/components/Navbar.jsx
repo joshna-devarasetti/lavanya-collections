@@ -170,14 +170,6 @@ export const Navbar = () => {
                     >
                       Create Account
                     </Link>
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '0.25rem 0' }} />
-                    <Link
-                      to="/admin/login"
-                      onClick={() => setAccountMenuOpen(false)}
-                      style={{ display: 'block', padding: '0.6rem 1rem', fontSize: '0.82rem', color: 'var(--gold-dark)' }}
-                    >
-                      Admin Portal Login
-                    </Link>
                   </>
                 )}
               </div>
@@ -322,7 +314,7 @@ export const Navbar = () => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <Link to="/login" className="btn btn-primary btn-block" onClick={() => setMobileMenuOpen(false)}>Login</Link>
-                  <Link to="/admin/login" className="btn btn-outline-dark btn-block" onClick={() => setMobileMenuOpen(false)}>Admin Portal</Link>
+                  <Link to="/register" className="btn btn-outline btn-block" onClick={() => setMobileMenuOpen(false)}>Register</Link>
                 </div>
               )}
             </div>

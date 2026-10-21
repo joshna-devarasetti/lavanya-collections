@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, MessageCircle, ShieldCheck, Heart } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 export const Footer = () => {
-  const whatsappNumber = import.meta.env.VITE_STORE_WHATSAPP || '+919876543210';
-  const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
+  const { storeName, contactNumber, email, cleanWhatsAppPhone, formattedAddress } = useSettings();
 
   return (
     <footer style={{ background: '#23130C', color: '#FAF6EE', paddingTop: '4rem', paddingBottom: '2rem', borderTop: '2px solid var(--gold-dark)', marginTop: '4rem' }}>
@@ -12,16 +12,16 @@ export const Footer = () => {
         {/* Brand Column */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            <img src="/logo.svg" alt="Lavanya Collections" style={{ width: '38px', height: '38px' }} />
+            <img src="/logo.svg" alt={storeName} style={{ width: '38px', height: '38px' }} />
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 700, color: '#FAF6EE' }}>
-              Lavanya Collections
+              {storeName}
             </span>
           </div>
           <p style={{ color: '#D4C4B7', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
             A boutique destination celebrating timeless Indian traditions. Offering exquisite jewellery, designer photoshoot frocks, traditional dolls, and personalized wedding decor for purchase and rentals.
           </p>
           <a
-            href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent('Hello Lavanya Collections, I would like to inquire about your collections.')}`}
+            href={`https://wa.me/${cleanWhatsAppPhone}?text=${encodeURIComponent(`Hello ${storeName}, I would like to inquire about your collections.`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary btn-sm"
@@ -60,7 +60,6 @@ export const Footer = () => {
             <li><Link to="/policies#privacy">Privacy Policy</Link></li>
             <li><Link to="/policies#terms">Terms of Service</Link></li>
             <li><Link to="/contact">Contact & Store Location</Link></li>
-            <li><Link to="/admin/login" style={{ opacity: 0.6, fontSize: '0.8rem' }}>Admin Portal Access</Link></li>
           </ul>
         </div>
 
@@ -72,15 +71,15 @@ export const Footer = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.9rem', color: '#D4C4B7' }}>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
               <MapPin size={18} color="var(--gold-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span>Plot 42, Traditional Enclave, Jubilee Hills Road No. 36, Hyderabad, Telangana 500033</span>
+              <span>{formattedAddress}</span>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <Phone size={16} color="var(--gold-primary)" />
-              <span>+91 98765 43210</span>
+              <a href={`tel:${contactNumber}`} style={{ color: '#D4C4B7', textDecoration: 'none' }}>{contactNumber}</a>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <Mail size={16} color="var(--gold-primary)" />
-              <span>contact@lavanyacollections.com</span>
+              <a href={`mailto:${email}`} style={{ color: '#D4C4B7', textDecoration: 'none' }}>{email}</a>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', color: 'var(--gold-light)', fontSize: '0.82rem' }}>
               <ShieldCheck size={16} />

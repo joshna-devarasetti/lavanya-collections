@@ -14,6 +14,7 @@ import {
 import { api } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { useNotification } from '../../context/NotificationContext';
+import { useSettings } from '../../context/SettingsContext';
 import { formatINR } from '../../utils/formatters';
 
 export const ProductDetailPage = () => {
@@ -21,6 +22,7 @@ export const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { notifySuccess, notifyError } = useNotification();
+  const { cleanWhatsAppPhone, storeName } = useSettings();
 
   const [product, setProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState('');
@@ -160,9 +162,7 @@ export const ProductDetailPage = () => {
     }
   };
 
-  const whatsappNumber = import.meta.env.VITE_STORE_WHATSAPP || '+919876543210';
-  const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
-  const inquiryText = encodeURIComponent(`Hello Lavanya Collections! I am interested in "${product.name}" (Ref: ${product.slug}). Could you share more details or availability?`);
+  const inquiryText = encodeURIComponent(`Hello ${storeName}! I am interested in "${product.name}" (Ref: ${product.slug}). Could you share more details or availability?`);
 
   return (
     <div style={{ padding: '2rem 1rem 5rem 1rem' }}>
@@ -425,7 +425,7 @@ export const ProductDetailPage = () => {
 
               {/* Direct WhatsApp Stylist Assistance */}
               <a
-                href={`https://wa.me/${cleanPhone}?text=${inquiryText}`}
+                href={`https://wa.me/${cleanWhatsAppPhone}?text=${inquiryText}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-outline btn-block"

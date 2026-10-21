@@ -5,8 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 
 export const AdminLoginPage = () => {
-  const [email, setEmail] = useState('admin@lavanyacollections.com');
-  const [password, setPassword] = useState('LavanyaAdmin@2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { adminLogin } = useAuth();
   const { notifySuccess, notifyError } = useNotification();

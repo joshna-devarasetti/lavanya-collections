@@ -1,18 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { api } from '../../services/api';
+import { useSettings } from '../../context/SettingsContext';
 
 export const PoliciesPage = () => {
-  const [policies, setPolicies] = useState(null);
+  const { policies } = useSettings();
   const location = useLocation();
-
-  useEffect(() => {
-    api.getSettings().then((res) => {
-      if (res.success && res.settings?.policies) {
-        setPolicies(res.settings.policies);
-      }
-    });
-  }, []);
 
   useEffect(() => {
     if (location.hash) {

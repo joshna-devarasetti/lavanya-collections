@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, MessageCircle, Clock, Send, CheckCircle2 } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import { useSettings } from '../../context/SettingsContext';
 
 export const ContactPage = () => {
   const { notifySuccess } = useNotification();
+  const { storeName, contactNumber, email, cleanWhatsAppPhone, formattedAddress } = useSettings();
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', message: '' });
-
-  const whatsappNumber = import.meta.env.VITE_STORE_WHATSAPP || '+919876543210';
-  const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,7 +38,7 @@ export const ContactPage = () => {
                 <div>
                   <strong>Boutique Address:</strong>
                   <p style={{ color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                    Plot 42, Traditional Enclave, Jubilee Hills Road No. 36, Hyderabad, Telangana 500033
+                    {formattedAddress}
                   </p>
                 </div>
               </div>
@@ -48,7 +47,9 @@ export const ContactPage = () => {
                 <Phone size={20} color="var(--gold-primary)" />
                 <div>
                   <strong>Phone / Orders:</strong>
-                  <p style={{ color: 'var(--text-secondary)' }}>+91 98765 43210</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>
+                    <a href={`tel:${contactNumber}`} style={{ color: 'inherit', textDecoration: 'none' }}>{contactNumber}</a>
+                  </p>
                 </div>
               </div>
 
@@ -56,7 +57,9 @@ export const ContactPage = () => {
                 <Mail size={20} color="var(--gold-primary)" />
                 <div>
                   <strong>Email:</strong>
-                  <p style={{ color: 'var(--text-secondary)' }}>contact@lavanyacollections.com</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>
+                    <a href={`mailto:${email}`} style={{ color: 'inherit', textDecoration: 'none' }}>{email}</a>
+                  </p>
                 </div>
               </div>
 
@@ -70,7 +73,7 @@ export const ContactPage = () => {
 
               <div style={{ marginTop: '1rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
                 <a
-                  href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent('Hello Lavanya Collections! I would like to schedule a visit or ask a question.')}`}
+                  href={`https://wa.me/${cleanWhatsAppPhone}?text=${encodeURIComponent(`Hello ${storeName}! I would like to schedule a visit or ask a question.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary btn-block"

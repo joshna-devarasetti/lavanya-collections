@@ -1,14 +1,14 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 export const WhatsAppButton = () => {
-  const whatsappNumber = import.meta.env.VITE_STORE_WHATSAPP || '+919876543210';
-  const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
-  const defaultMessage = encodeURIComponent('Hello Lavanya Collections! I would like to inquire about your products and rentals.');
+  const { cleanWhatsAppPhone, storeName } = useSettings();
+  const defaultMessage = encodeURIComponent(`Hello ${storeName}! I would like to inquire about your products and rentals.`);
 
   return (
     <a
-      href={`https://wa.me/${cleanPhone}?text=${defaultMessage}`}
+      href={`https://wa.me/${cleanWhatsAppPhone}?text=${defaultMessage}`}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"

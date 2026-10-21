@@ -41,6 +41,7 @@ export const api = {
   adminLogin: (body) => request('/auth/admin-login', { method: 'POST', body }),
   getMe: () => request('/auth/me'),
   updateProfile: (body) => request('/auth/profile', { method: 'PUT', body }),
+  updateCredentials: (body) => request('/auth/update-credentials', { method: 'PUT', body }),
   addAddress: (body) => request('/auth/addresses', { method: 'POST', body }),
 
   // Categories

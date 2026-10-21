@@ -217,11 +217,90 @@ const addAddress = async (req, res, next) => {
   }
 };
 
+// Update Credentials (Email and/or Password)
+const updateCredentials = async (req, res, next) => {
+  try {
+    const { name, email, currentPassword, newPassword, phone } = req.body;
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    // If changing password, current password MUST be verified
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide your current password to set a new password.'
+        });
+      }
+
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Current password does not match.'
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'New password must be at least 6 characters.'
+        });
+      }
+
+      user.password = newPassword;
+    }
+
+    // If changing email, verify uniqueness
+    if (email && email.toLowerCase() !== user.email) {
+      const emailExists = await User.findOne({
+        email: email.toLowerCase(),
+        _id: { $ne: user._id }
+      });
+
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'This email address is already in use by another account.'
+        });
+      }
+
+      user.email = email.toLowerCase();
+    }
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+
+    await user.save();
+
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: 'Credentials updated successfully. Please use your new credentials next time.',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   register,
   login,
   adminLogin,
   getMe,
   updateProfile,
+  updateCredentials,
   addAddress
 };

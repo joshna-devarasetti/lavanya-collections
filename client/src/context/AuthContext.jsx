@@ -73,6 +73,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateCredentials = async (credentials) => {
+    const res = await api.updateCredentials(credentials);
+    if (res.success && res.token) {
+      localStorage.setItem('lavanya_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+    }
+    return res;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -85,7 +95,8 @@ export const AuthProvider = ({ children }) => {
         adminLogin,
         register,
         logout,
-        refreshUser
+        refreshUser,
+        updateCredentials
       }}
     >
       {children}
