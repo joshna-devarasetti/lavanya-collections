@@ -14,7 +14,9 @@ const Notification = require('../models/Notification');
 
 const seedData = async () => {
   try {
-    await connectDB();
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
     console.log('[Seed] Starting Lavanya Collections database seed...');
 
     // Clear existing collections safely
@@ -67,9 +69,9 @@ const seedData = async () => {
     // 2. Seed Users
     const adminUser = await User.create({
       name: process.env.ADMIN_NAME || 'Lavanya Admin',
-      email: process.env.ADMIN_EMAIL || 'admin@lavanyacollections.com',
+      email: process.env.ADMIN_EMAIL || 'lavanyacollections@gmail.com',
       phone: process.env.ADMIN_PHONE || '+919876543210',
-      password: process.env.ADMIN_PASSWORD || 'LavanyaAdmin@2026!',
+      password: process.env.ADMIN_PASSWORD || 'lavanyacollect',
       role: 'admin'
     });
 
@@ -437,7 +439,7 @@ const seedData = async () => {
     });
 
     console.log('[Seed] Database seeding completed successfully!');
-    console.log(`[Seed] Admin login: admin@lavanyacollections.com / LavanyaAdmin@2026!`);
+    console.log(`[Seed] Admin login: lavanyacollections@gmail.com / lavanyacollect`);
     console.log(`[Seed] Customer login: priya.sharma@example.com / Customer@2026!`);
 
     return true;

@@ -104,7 +104,7 @@ The platform initializes with pre-configured accounts:
 
 | Role | Email | Password | Access |
 | :--- | :--- | :--- | :--- |
-| **Store Administrator** | `admin@lavanyacollections.com` | `LavanyaAdmin@2026!` | Full Admin Dashboard (`/admin`) |
+| **Store Administrator** | `lavanyacollections@gmail.com` | `lavanyacollect` | Full Admin Dashboard (`/admin`) |
 | **Test Customer** | `priya.sharma@example.com` | `Customer@2026!` | Customer Portal & Tracking (`/account`) |
 
 ---

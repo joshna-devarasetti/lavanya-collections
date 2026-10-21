@@ -75,8 +75,8 @@ Error Response:
 - **Request Body**:
   ```json
   {
-    "email": "admin@lavanyacollections.com",
-    "password": "LavanyaAdmin@2026!"
+    "email": "lavanyacollections@gmail.com",
+    "password": "lavanyacollect"
   }
   ```
 - **Response (200 OK)**:
@@ -87,7 +87,7 @@ Error Response:
     "user": {
       "_id": "60d0fe4f...",
       "name": "Lavanya Administrator",
-      "email": "admin@lavanyacollections.com",
+      "email": "lavanyacollections@gmail.com",
       "role": "admin"
     }
   }

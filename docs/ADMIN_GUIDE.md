@@ -9,8 +9,8 @@ Welcome to the **Lavanya Collections Store Operations Guide**. This guide is wri
 1. Open your web browser and navigate to:
    `http://localhost:5173/admin/login` (or your live domain `/admin/login`)
 2. Enter your administrator credentials:
-   - **Email**: `admin@lavanyacollections.com`
-   - **Password**: `LavanyaAdmin@2026!`
+   - **Email**: `lavanyacollections@gmail.com`
+   - **Password**: `lavanyacollect`
 3. Click **Sign In to Dashboard**. You will be directed to the primary administrative overview.
 
 ---

@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 let mongoServer = null;
 
 const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return; // Already connected
+  }
+
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/lavanya_collections';
   
   try {

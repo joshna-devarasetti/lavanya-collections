@@ -126,7 +126,7 @@ The database comes pre-loaded with an administrator account, a test customer acc
 
 | Role | Email Address | Password | Permissions |
 | :--- | :--- | :--- | :--- |
-| **Store Administrator** | `admin@lavanyacollections.com` | `LavanyaAdmin@2026!` | Full administrative access to dashboard, orders, rentals, custom designs, inventory, and settings |
+| **Store Administrator** | `lavanyacollections@gmail.com` | `lavanyacollect` | Full administrative access to dashboard, orders, rentals, custom designs, inventory, and settings |
 | **Test Customer** | `priya.sharma@example.com` | `Customer@2026!` | Customer portal, shopping, rentals, custom requests, and order tracking |
 
 ---
